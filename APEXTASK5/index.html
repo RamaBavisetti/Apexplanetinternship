@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-commerce Store</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f9fafb; /* Fallback light gray background */
+        }
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #e2d2d2;
+        }
+        /* Style for the product detail modal */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 100; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            position: relative;
+            max-width: 90%;
+            max-height: 90%;
+            overflow-y: auto;
+            animation: fadeIn 0.3s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .close-button {
+            color: #aaa;
+            position: absolute;
+            top: 1rem;
+            right: 1.5rem;
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close-button:hover,
+        .close-button:focus {
+            color: #333;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        /* Carousel specific styles */
+        .carousel-container {
+            overflow: hidden;
+            position: relative;
+            border-radius: 1rem;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .carousel-track {
+            display: flex;
+            transition: transform 0.5s ease-in-out;
+            align-items: stretch; /* Ensure items stretch to fill container height */
+        }
+        .carousel-item {
+            min-width: 100%; /* Each item takes full width of container */
+            flex-shrink: 0; /* Prevent items from shrinking */
+            display: flex; /* Make carousel item a flex container for its content */
+            justify-content: center;
+            align-items: center;
+        }
+        .carousel-item-content { /* New class for the inner content block */
+            background-color: #ffffff;
+            border-radius: 1rem;
+            padding: 2.5rem; /* Increased padding */
+            display: flex;
+            flex-direction: column; /* Stack on mobile */
+            align-items: center; /* Center items on mobile */
+            gap: 2rem; /* Increased gap */
+            width: 100%; /* Take full width of carousel-item */
+            max-width: 800px; /* Max width for content block */
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15); /* More pronounced shadow */
+            animation: slideIn 0.5s ease-out; /* Add entry animation */
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(50px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @media (min-width: 768px) { /* Medium screens and up */
+            .carousel-item-content {
+                flex-direction: row; /* Row on larger screens */
+                text-align: left; /* Align text left on larger screens */
+            }
+        }
+
+        .carousel-button {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: rgba(0,0,0,0.5);
+            color: white;
+            padding: 0.75rem 1.25rem; /* Larger buttons */
+            border-radius: 9999px; /* Fully rounded */
+            cursor: pointer;
+            z-index: 10;
+            font-size: 1.5rem; /* Larger arrow icons */
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+        .carousel-button:hover {
+            background-color: rgba(0,0,0,0.7);
+            transform: translateY(-50%) scale(1.05); /* Slight scale effect */
+        }
+        .carousel-button-prev {
+            left: 1rem;
+        }
+        .carousel-button-next {
+            right: 1rem;
+        }
+        .carousel-dot {
+            width: 12px; /* Larger dots */
+            height: 12px;
+            background-color: rgba(255,255,255,0.7);
+            border-radius: 50%;
+            cursor: pointer;
+            margin: 0 6px; /* Increased margin */
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+        .carousel-dot.active {
+            background-color: rgba(255,255,255,1);
+            transform: scale(1.2); /* Highlight active dot */
+        }
+        .dots-container {
+            position: absolute;
+            bottom: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        /* Product Card specific style to ensure button visibility */
+        .product-card .add-to-cart-btn {
+            font-size: 0.875rem; /* text-sm */
+            padding: 0.5rem 1rem; /* py-2 px-4 */
+            min-width: 8rem; /* Ensure minimum width for the button */
+            text-align: center;
+        }
+        /* Ensure the flex container in product card allows content to wrap if needed */
+        .product-card .price-and-button { /* Renamed for clarity */
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start; /* Align items to start for better stacking */
+            gap: 0.5rem; /* Smaller gap */
+            width: 100%; /* Ensure it takes full width for stacking */
+        }
+        @media (min-width: 640px) { /* sm breakpoint */
+            .product-card .price-and-button {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-purple-100 via-blue-100 to-indigo-100 text-gray-800">
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-lg py-4 px-6 md:px-12 flex justify-between items-center fixed w-full z-50 top-0">
+        <h1 class="text-3xl font-bold text-white">ShopSphere</h1>
+        <nav>
+            <ul class="flex space-x-6">
+                <li><a href="#" class="text-lg font-medium text-white hover:text-indigo-200 transition duration-300">Home</a></li>
+                <li><a href="#products-section" class="text-lg font-medium text-white hover:text-indigo-200 transition duration-300">Products</a></li>
+                <li><a href="#about-section" class="text-lg font-medium text-white hover:text-indigo-200 transition duration-300">About Us</a></li>
+                <li><button id="cart-button" class="text-lg font-medium text-white hover:text-indigo-200 transition duration-300 relative">
+                    Cart (<span id="cart-count" class="text-yellow-300 font-bold">0</span>)
+                </button></li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="container mx-auto px-4 py-8 mt-20">
+        <!-- New Arrivals Carousel - Modern Professional Version -->
+        <section class="my-10 bg-gradient-to-r from-pink-500 to-purple-500 p-8 rounded-3xl shadow-xl">
+            <h2 class="text-4xl font-extrabold text-center text-white mb-8 tracking-tight">New Products</h2>
+            <div class="carousel-container relative max-w-5xl mx-auto h-[450px]"> <!-- Increased height for better content display -->
+                <div class="carousel-track" id="new-arrivals-carousel">
+                    <!-- Carousel items will be injected here by JS -->
+                </div>
+                <button class="carousel-button carousel-button-prev" aria-label="Previous slide">&#10094;</button>
+                <button class="carousel-button carousel-button-next" aria-label="Next slide">&#10095;</button>
+                <div class="dots-container" id="carousel-dots"></div>
+            </div>
+        </section>
+
+        <!-- About Us Section -->
+        <section id="about-section" class="my-12 bg-white p-8 rounded-3xl shadow-lg">
+            <h2 class="text-4xl font-extrabold text-center text-indigo-800 mb-8 tracking-tight">About ShopSphere</h2>
+            <div class="text-lg text-gray-700 leading-relaxed max-w-3xl mx-auto">
+                <p class="mb-4">Welcome to ShopSphere ----- where shopping meets simplicity, style, and satisfaction.
+
+At ShopSphere, we handpick our collections based on quality, durability, and contemporary design, offering something special in every category — from tech gadgets and cozy apparel to home essentials and captivating reads.
+
+
+Customer-first mindset: Your happiness drives everything we do.
+                <p class="mb-4">Why shop with us?</p>
+                <p class="mb-4">Customer-first mindset: Your happiness drives everything we do.
+
+Curated excellence: Every product is selected to meet high standards of performance and aesthetics.
+
+Effortless browsing: Enjoy enhanced filters, lazy‑loading pages for speed, and seamless navigation across all devices and browsers.
+
+Safe & secure checkout: We prioritize your privacy and security so you can shop with confidence.
+</p>
+                <p>Thank you for choosing ShopSphere. We are thrilled to be a part of your shopping adventures and look forward to serving you!</p>
+            </div>
+        </section>
+
+        <!-- Product Listing and Filters -->
+        <section id="products-section" class="flex flex-col lg:flex-row gap-8 my-12">
+            <!-- Filters Sidebar -->
+            <aside class="w-full lg:w-1/4 bg-blue-50 p-6 rounded-2xl shadow-lg h-fit sticky top-28 border border-blue-200">
+                <h3 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-4 border-blue-200">Filter Products</h3>
+
+                <!-- Search Input -->
+                <div class="mb-6">
+                    <label for="search-input" class="block text-gray-700 text-sm font-medium mb-2">Search by Name</label>
+                    <input type="text" id="search-input" placeholder="e.g., Laptop, Shirt" class="w-full px-4 py-2 border border-blue-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-200">
+                </div>
+
+                <!-- Category Filter -->
+                <div class="mb-6">
+                    <label for="category-filter" class="block text-gray-700 text-sm font-medium mb-2">Category</label>
+                    <select id="category-filter" class="w-full px-4 py-2 border border-blue-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-200">
+                        <option value="all">All Categories</option>
+                        <option value="Electronics">Electronics</option>
+                        <option value="Apparel">Apparel</option>
+                        <option value="Home & Kitchen">Home & Kitchen</option>
+                        <option value="Books">Books</option>
+                        <option value="Sports">Sports</option>
+                    </select>
+                </div>
+
+                <!-- Price Range Filter -->
+                <div class="mb-6">
+                    <label class="block text-gray-700 text-sm font-medium mb-2">Price Range</label>
+                    <div class="flex items-center space-x-2 mb-2">
+                        <input type="number" id="min-price" placeholder="Min" class="w-1/2 px-4 py-2 border border-blue-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-200">
+                        <span>-</span>
+                        <input type="number" id="max-price" placeholder="Max" class="w-1/2 px-4 py-2 border border-blue-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-200">
+                    </div>
+                </div>
+
+                <!-- Brand Filter -->
+                <div class="mb-6">
+                    <label for="brand-filter" class="block text-gray-700 text-sm font-medium mb-2">Brand</label>
+                    <select id="brand-filter" class="w-full px-4 py-2 border border-blue-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-200">
+                        <option value="all">All Brands</option>
+                        <option value="Samsung">Samsung</option>
+                        <option value="Apple">Apple</option>
+                        <option value="Nike">Nike</option>
+                        <option value="Sony">Sony</option>
+                        <option value="Amazon Basics">Amazon Basics</option>
+                        <option value="Adidas">Adidas</option>
+                        <option value="Dell">Dell</option>
+                    </select>
+                </div>
+
+                <!-- Clear Filters Button -->
+                <button id="clear-filters" class="w-full bg-red-500 text-white py-3 px-6 rounded-lg font-semibold hover:bg-red-600 transition duration-300 shadow-md">Clear Filters</button>
+            </aside>
+
+            <!-- Product Grid -->
+            <div class="w-full lg:w-3/4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-8" id="product-list">
+                <!-- Products will be injected here by JS -->
+            </div>
+            <div id="no-products-message" class="text-center text-gray-600 text-lg py-10 hidden">
+                No products found matching your criteria.
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-8 px-6 md:px-12 text-center mt-12 rounded-t-xl shadow-inner">
+        <p>&copy; 2025 ShopSphere. All rights reserved.</p>
+        <div class="flex justify-center space-x-6 mt-4">
+            <a href="#" class="hover:text-pink-400 transition duration-300">Privacy Policy</a>
+            <a href="#" class="hover:text-pink-400 transition duration-300">Terms of Service</a>
+            <a href="#" class="hover:text-pink-400 transition duration-300">Contact Us</a>
+        </div>
+    </footer>
+
+    <!-- Product Detail Modal -->
+    <div id="product-detail-modal" class="modal hidden">
+        <div class="modal-content relative bg-white p-8 rounded-2xl max-w-4xl w-full mx-auto shadow-2xl animate-fade-in-up">
+            <span class="close-button text-gray-500 hover:text-gray-900 transition" onclick="closeProductDetailModal()">&times;</span>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                <div class="flex justify-center items-center h-full">
+                    <img id="modal-product-image" src="" alt="Product Image" class="w-full max-h-80 object-contain rounded-lg shadow-md lazy">
+                </div>
+                <div>
+                    <h2 id="modal-product-name" class="text-4xl font-bold text-gray-900 mb-3"></h2>
+                    <p class="text-indigo-600 text-3xl font-extrabold mb-4">₹<span id="modal-product-price"></span></p>
+                    <p id="modal-product-category" class="text-gray-600 text-md mb-2"></p>
+                    <p id="modal-product-brand" class="text-gray-600 text-md mb-4"></p>
+                    <p id="modal-product-description" class="text-gray-700 leading-relaxed mb-6"></p>
+                    <button class="bg-gradient-to-r from-green-500 to-teal-600 text-white py-3 px-8 rounded-full font-semibold text-lg hover:from-green-600 hover:to-teal-700 transition duration-300 shadow-lg" onclick="addToCartFromModal()">Add to Cart</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Shopping Cart Modal -->
+    <div id="cart-modal" class="modal hidden">
+        <div class="modal-content relative bg-white p-8 rounded-2xl max-w-lg w-full mx-auto shadow-2xl animate-fade-in-up">
+            <span class="close-button text-gray-500 hover:text-gray-900 transition" onclick="closeCartModal()">&times;</span>
+            <h2 class="text-3xl font-bold text-gray-900 mb-6 border-b pb-4">Your Shopping Cart</h2>
+            <div id="cart-items" class="mb-6 max-h-80 overflow-y-auto">
+                <!-- Cart items will be injected here by JS -->
+            </div>
+            <div class="flex justify-between items-center text-2xl font-bold text-gray-900 border-t pt-4">
+                <span>Total:</span>
+                <span>₹<span id="cart-total">0.00</span></span>
+            </div>
+            <div class="mt-6 flex justify-end">
+                <button class="bg-indigo-600 text-white py-3 px-8 rounded-full font-semibold text-lg hover:bg-indigo-700 transition duration-300 shadow-lg">Proceed to Checkout</button>
+            </div>
+            <div id="empty-cart-message" class="text-center text-gray-600 text-lg py-4 hidden">
+                Your cart is empty.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mock product data
+        const products = [
+            {
+                id: 1,
+                name: "Laptop Pro X",
+                description: "Experience unparalleled performance with the new Laptop Pro X. Featuring a stunning Retina display, powerful M2 chip, and all-day battery life, it's designed for professionals and creatives alike. Ultra-lightweight and sleek, it's perfect for on-the-go productivity.",
+                price: 120000.00,
+                image: "Laptop x 13.jpg",
+                category: "Electronics",
+                brand: "Apple",
+                isNewArrival: true
+            },
+            {
+                id: 4,
+                name: "Gaming Mouse RGB",
+                description: "Dominate your games with the Gaming Mouse RGB. High-precision sensor, customizable RGB lighting, and programmable buttons for an ultimate gaming experience. Designed for comfort and speed.",
+                price: 2500.00,
+                image: "Gaming Mouse RGB.jpg",
+                category: "Electronics",
+                brand: "Dell",
+                isNewArrival: false
+            },
+            {
+                id: 6,
+                name: "Classic Denim Jeans",
+                description: "Timeless style meets modern comfort with our Classic Denim Jeans. Durable, versatile, and perfect for any casual occasion. Available in various washes.",
+                price: 2500.00,
+                image: "download.jpg",
+                category: "Apparel",
+                brand: "Adidas",
+                isNewArrival: false
+            },
+            {
+                id: 9,
+                name: "Fantasy Novel Series",
+                description: "Embark on an epic journey with this captivating Fantasy Novel Series. Full of magic, adventure, and unforgettable characters. A must-read for fantasy lovers.",
+                price: 1800.00,
+                image: "Fantasy Novel Series.jpg",
+                category: "Books",
+                brand: "Penguin",
+                isNewArrival: true
+            },
+            {
+                id: 10,
+                name: "Yoga Mat Pro",
+                description: "Achieve perfect balance with the Yoga Mat Pro. Non-slip surface, extra thick padding for comfort, and durable material. Ideal for all levels of yoga practitioners.",
+                price: 1500.00,
+                image: "Yoga Mat Pro.jpg",
+                category: "Sports",
+                brand: "Nike",
+                isNewArrival: false
+            },
+            {
+                id: 11,
+                name: "Bluetooth Speaker Ultra",
+                description: "Experience powerful sound on the go with the Bluetooth Speaker Ultra. Portable, waterproof, and with long battery life. Perfect for outdoor adventures.",
+                price: 4500.00,
+                image: "Bluetooth Speaker Ultra.jpg",
+                category: "Electronics",
+                brand: "Sony",
+                isNewArrival: false
+            },
+            {
+                id: 12,
+                name: "Running Shoes Xtreme",
+                description: "Push your limits with Running Shoes Xtreme. Lightweight design, superior cushioning, and excellent grip for optimal performance. Ideal for long-distance runners.",
+                price: 7000.00,
+                image: "Running Shoes Xtreme.jpg",
+                category: "Apparel",
+                brand: "Adidas",
+                isNewArrival: true
+            },
+            {
+                id: 13,
+                name: "Premium Coffee Maker",
+                description: "Brew the perfect cup every time with this premium coffee maker. Features programmable settings and a self-cleaning function. Sleek design for modern kitchens.",
+                price: 7500.00,
+                image: "Premium Coffee Maker.jpg",
+                category: "Home & Kitchen",
+                brand: "Brewsly",
+                isNewArrival: true
+            },
+            {
+                id: 14,
+                name: "Advanced Drone",
+                description: "Capture breathtaking aerial footage with the Advanced Drone. Equipped with a 4K camera, GPS, and intelligent flight modes. Perfect for enthusiasts and professionals.",
+                price: 35000.00,
+                image: "Advanced Drone.jpg",
+                category: "Electronics",
+                brand: "DroneTech",
+                isNewArrival: true
+            }
+        ];
+
+        let cart = JSON.parse(localStorage.getItem('cart')) || []; // Load cart from localStorage
+        let currentProductInModal = null; // To store the product object for the modal
+
+        // DOM Elements
+        const productList = document.getElementById('product-list');
+        const searchInput = document.getElementById('search-input');
+        const categoryFilter = document.getElementById('category-filter');
+        const minPriceInput = document.getElementById('min-price');
+        const maxPriceInput = document.getElementById('max-price');
+        const brandFilter = document.getElementById('brand-filter');
+        const clearFiltersBtn = document.getElementById('clear-filters');
+        const noProductsMessage = document.getElementById('no-products-message');
+        const cartCountSpan = document.getElementById('cart-count');
+        const cartButton = document.getElementById('cart-button');
+        const cartModal = document.getElementById('cart-modal');
+        const cartItemsContainer = document.getElementById('cart-items');
+        const cartTotalSpan = document.getElementById('cart-total');
+        const emptyCartMessage = document.getElementById('empty-cart-message');
+        const productDetailModal = document.getElementById('product-detail-modal');
+
+        // Carousel elements
+        const newArrivals = products.filter(p => p.isNewArrival);
+        const carouselTrack = document.getElementById('new-arrivals-carousel');
+        const prevButton = document.querySelector('.carousel-button-prev');
+        const nextButton = document.querySelector('.carousel-button-next');
+        const carouselDotsContainer = document.getElementById('carousel-dots');
+        let currentIndex = 0;
+        let carouselInterval;
+
+        /**
+         * Renders a single product card to the DOM.
+         * @param {Object} product - The product object.
+         * @returns {string} - HTML string for the product card.
+         */
+        function renderProductCard(product) {
+            return `
+                <div class="product-card bg-white rounded-2xl shadow-xl hover:shadow-2xl transition duration-300 transform hover:-translate-y-1 overflow-hidden cursor-pointer" data-product-id="${product.id}">
+                    <img data-src="${product.image}" alt="${product.name}" class="w-full h-48 object-cover rounded-t-2xl lazy">
+                    <div class="p-6">
+                        <h3 class="text-xl font-semibold text-gray-900 mb-2">${product.name}</h3>
+                        <p class="text-gray-600 text-sm mb-3">${product.category} | ${product.brand}</p>
+                        <div class="price-and-button"> <!-- Renamed for clarity -->
+                            <span class="text-indigo-600 text-2xl font-bold">₹${product.price.toFixed(2)}</span>
+                            <button class="add-to-cart-btn bg-gradient-to-r from-green-500 to-teal-600 text-white py-2 px-4 rounded-full font-bold hover:from-green-600 hover:to-teal-700 transition duration-300 shadow-lg" data-product-id="${product.id}">Add to Cart</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        /**
+         * Displays products based on current filters and search query.
+         */
+        function displayProducts() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const selectedCategory = categoryFilter.value;
+            const minPrice = parseFloat(minPriceInput.value) || 0;
+            const maxPrice = parseFloat(maxPriceInput.value) || Infinity;
+            const selectedBrand = brandFilter.value;
+
+            const filteredProducts = products.filter(product => {
+                const matchesSearch = product.name.toLowerCase().includes(searchTerm) ||
+                                      product.description.toLowerCase().includes(searchTerm);
+                const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
+                const matchesPrice = product.price >= minPrice && product.price <= maxPrice;
+                const matchesBrand = selectedBrand === 'all' || product.brand === selectedBrand;
+                return matchesSearch && matchesCategory && matchesPrice && matchesBrand;
+            });
+
+            productList.innerHTML = '';
+            if (filteredProducts.length === 0) {
+                noProductsMessage.classList.remove('hidden');
+            } else {
+                noProductsMessage.classList.add('hidden');
+                filteredProducts.forEach(product => {
+                    productList.innerHTML += renderProductCard(product);
+                });
+                setupLazyLoading(); // Apply lazy loading to newly rendered images
+            }
+            addEventListenersToProductCards();
+            addEventListenersToAddToCartButtons();
+        }
+
+        /**
+         * Sets up lazy loading for images using Intersection Observer.
+         */
+        function setupLazyLoading() {
+            const lazyImages = document.querySelectorAll('img.lazy');
+
+            if ('IntersectionObserver' in window) {
+                let lazyLoadObserver = new IntersectionObserver(function(entries, observer) {
+                    entries.forEach(function(entry) {
+                        if (entry.isIntersecting) {
+                            let lazyImage = entry.target;
+                            lazyImage.src = lazyImage.dataset.src;
+                            lazyImage.classList.remove('lazy');
+                            lazyLoadObserver.unobserve(lazyImage);
+                        }
+                    });
+                });
+
+                lazyImages.forEach(function(lazyImage) {
+                    lazyLoadObserver.observe(lazyImage);
+                });
+            } else {
+                // Fallback for browsers that do not support Intersection Observer
+                lazyImages.forEach(function(lazyImage) {
+                    lazyImage.src = lazyImage.dataset.src;
+                    lazyImage.classList.remove('lazy');
+                });
+            }
+        }
+
+        /**
+         * Adds event listeners to each product card to open the detail modal.
+         */
+        function addEventListenersToProductCards() {
+            document.querySelectorAll('.product-card').forEach(card => {
+                card.removeEventListener('click', openProductDetailModalHandler); // Prevent duplicate listeners
+                card.addEventListener('click', openProductDetailModalHandler);
+            });
+        }
+
+        /**
+         * Handles opening the product detail modal.
+         * @param {Event} event - The click event.
+         */
+        function openProductDetailModalHandler(event) {
+            // Check if the click was on the "Add to Cart" button, if so, do not open modal
+            if (event.target.classList.contains('add-to-cart-btn')) {
+                return;
+            }
+            const productId = parseInt(event.currentTarget.dataset.productId);
+            const product = products.find(p => p.id === productId);
+            if (product) {
+                currentProductInModal = product; // Store the product for add to cart from modal
+                document.getElementById('modal-product-image').src = product.image;
+                document.getElementById('modal-product-image').alt = product.name;
+                document.getElementById('modal-product-name').textContent = product.name;
+                document.getElementById('modal-product-price').textContent = product.price.toFixed(2);
+                document.getElementById('modal-product-category').textContent = `Category: ${product.category}`;
+                document.getElementById('modal-product-brand').textContent = `Brand: ${product.brand}`;
+                document.getElementById('modal-product-description').textContent = product.description;
+                productDetailModal.classList.remove('hidden');
+            }
+        }
+
+        /**
+         * Closes the product detail modal.
+         */
+        function closeProductDetailModal() {
+            productDetailModal.classList.add('hidden');
+            currentProductInModal = null; // Clear the stored product
+        }
+
+        /**
+         * Adds a product to the cart from the detail modal.
+         */
+        function addToCartFromModal() {
+            if (currentProductInModal) {
+                addToCart(currentProductInModal.id);
+                closeProductDetailModal();
+            }
+        }
+
+        /**
+         * Adds event listeners to each "Add to Cart" button.
+         */
+        function addEventListenersToAddToCartButtons() {
+            document.querySelectorAll('.add-to-cart-btn').forEach(button => {
+                button.removeEventListener('click', handleAddToCartClick); // Prevent duplicate listeners
+                button.addEventListener('click', handleAddToCartClick);
+            });
+        }
+
+        /**
+         * Handles click on "Add to Cart" button.
+         * @param {Event} event - The click event.
+         */
+        function handleAddToCartClick(event) {
+            event.stopPropagation(); // Prevent opening product detail modal
+            const productId = parseInt(event.target.dataset.productId);
+            addToCart(productId);
+        }
+
+        /**
+         * Adds a product to the shopping cart.
+         * @param {number} productId - The ID of the product to add.
+         */
+        function addToCart(productId) {
+            const product = products.find(p => p.id === productId);
+            if (product) {
+                const existingItem = cart.find(item => item.id === productId);
+                if (existingItem) {
+                    existingItem.quantity++;
+                } else {
+                    cart.push({ ...product, quantity: 1 });
+                }
+                updateCartDisplay();
+                saveCartToLocalStorage();
+            }
+        }
+
+        /**
+         * Removes a product from the shopping cart.
+         * @param {number} productId - The ID of the product to remove.
+         */
+        function removeFromCart(productId) {
+            cart = cart.filter(item => item.id !== productId);
+            updateCartDisplay();
+            saveCartToLocalStorage();
+        }
+
+        /**
+         * Updates the quantity of a product in the shopping cart.
+         * @param {number} productId - The ID of the product.
+         * @param {number} newQuantity - The new quantity.
+         */
+        function updateCartQuantity(productId, newQuantity) {
+            const item = cart.find(item => item.id === productId);
+            if (item) {
+                if (newQuantity <= 0) {
+                    removeFromCart(productId);
+                } else {
+                    item.quantity = newQuantity;
+                    updateCartDisplay();
+                    saveCartToLocalStorage();
+                }
+            }
+        }
+
+        /**
+         * Updates the shopping cart display (count and modal content).
+         */
+        function updateCartDisplay() {
+            cartCountSpan.textContent = cart.reduce((total, item) => total + item.quantity, 0);
+            cartItemsContainer.innerHTML = '';
+            let total = 0;
+
+            if (cart.length === 0) {
+                emptyCartMessage.classList.remove('hidden');
+            } else {
+                emptyCartMessage.classList.add('hidden');
+                cart.forEach(item => {
+                    const itemTotal = item.price * item.quantity;
+                    total += itemTotal;
+                    cartItemsContainer.innerHTML += `
+                        <div class="flex items-center justify-between border-b py-4">
+                            <div class="flex items-center gap-4">
+                                <img src="${item.image}" alt="${item.name}" class="w-16 h-16 object-cover rounded-md shadow-sm">
+                                <div>
+                                    <h4 class="text-lg font-semibold text-gray-800">${item.name}</h4>
+                                    <p class="text-gray-600">₹${item.price.toFixed(2)} x ${item.quantity}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <button class="quantity-btn bg-gray-200 text-gray-700 px-3 py-1 rounded-md hover:bg-gray-300 transition" data-id="${item.id}" data-action="decrease">-</button>
+                                <span class="font-medium">${item.quantity}</span>
+                                <button class="quantity-btn bg-gray-200 text-gray-700 px-3 py-1 rounded-md hover:bg-gray-300 transition" data-id="${item.id}" data-action="increase">+</button>
+                                <button class="remove-from-cart-btn text-red-500 hover:text-red-700 transition" data-id="${item.id}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                document.querySelectorAll('.quantity-btn').forEach(button => {
+                    button.addEventListener('click', (event) => {
+                        const productId = parseInt(event.target.dataset.id);
+                        const action = event.target.dataset.action;
+                        const item = cart.find(i => i.id === productId);
+                        if (item) {
+                            if (action === 'increase') {
+                                updateCartQuantity(productId, item.quantity + 1);
+                            } else if (action === 'decrease') {
+                                updateCartQuantity(productId, item.quantity - 1);
+                            }
+                        }
+                    });
+                });
+
+                document.querySelectorAll('.remove-from-cart-btn').forEach(button => {
+                    button.addEventListener('click', (event) => {
+                        const productId = parseInt(event.target.dataset.id || event.target.closest('button').dataset.id);
+                        removeFromCart(productId);
+                    });
+                });
+            }
+            cartTotalSpan.textContent = total.toFixed(2);
+        }
+
+        /**
+         * Saves the current cart to localStorage.
+         */
+        function saveCartToLocalStorage() {
+            localStorage.setItem('cart', JSON.stringify(cart));
+        }
+
+        /**
+         * Opens the shopping cart modal.
+         */
+        function openCartModal() {
+            cartModal.classList.remove('hidden');
+            updateCartDisplay(); // Ensure the cart display is updated when opened
+        }
+
+        /**
+         * Closes the shopping cart modal.
+         */
+        function closeCartModal() {
+            cartModal.classList.add('hidden');
+        }
+
+        // Event Listeners for Filters and Search
+        searchInput.addEventListener('input', displayProducts);
+        categoryFilter.addEventListener('change', displayProducts);
+        minPriceInput.addEventListener('input', displayProducts);
+        maxPriceInput.addEventListener('input', displayProducts);
+        brandFilter.addEventListener('change', displayProducts);
+        clearFiltersBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            categoryFilter.value = 'all';
+            minPriceInput.value = '';
+            maxPriceInput.value = '';
+            brandFilter.value = 'all';
+            displayProducts();
+        });
+
+        // Event listener for cart button
+        cartButton.addEventListener('click', openCartModal);
+
+        // --- Carousel Logic ---
+        /**
+         * Renders the new arrivals carousel items.
+         */
+        function renderCarousel() {
+            carouselTrack.innerHTML = '';
+            carouselDotsContainer.innerHTML = '';
+            newArrivals.forEach((product, index) => {
+                carouselTrack.innerHTML += `
+                    <div class="carousel-item">
+                        <div class="carousel-item-content">
+                            <img data-src="${product.image}" alt="${product.name}" class="w-full md:w-1/2 h-64 object-contain rounded-lg shadow-md lazy">
+                            <div class="md:w-1/2 text-center md:text-left flex flex-col justify-center">
+                                <h3 class="text-3xl font-bold text-indigo-800 mb-2">${product.name}</h3>
+                                <p class="text-gray-700 mb-4">${product.description.substring(0, 180)}...</p>
+                                <span class="text-green-600 text-3xl font-extrabold mb-4">₹${product.price.toFixed(2)}</span>
+                                <button class="bg-gradient-to-r from-green-500 to-teal-600 text-white py-3 px-6 rounded-full text-lg font-bold hover:from-green-600 hover:to-teal-700 transition duration-300 shadow-lg" onclick="addToCart(${product.id})">Add to Cart</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                carouselDotsContainer.innerHTML += `<div class="carousel-dot" data-index="${index}"></div>`;
+            });
+            updateCarousel();
+            setupCarouselEventListeners();
+        }
+
+        /**
+         * Updates the carousel display based on the current index.
+         */
+        function updateCarousel() {
+            // Check if there are any children before accessing offsetWidth
+            const itemWidth = carouselTrack.children[0] ? carouselTrack.children[0].offsetWidth : 0;
+            carouselTrack.style.transform = `translateX(-${currentIndex * itemWidth}px)`;
+
+            document.querySelectorAll('.carousel-dot').forEach((dot, index) => {
+                if (index === currentIndex) {
+                    dot.classList.add('active');
+                } else {
+                    dot.classList.remove('active');
+                }
+            });
+            setupLazyLoading(); // Ensure lazy loading for carousel images
+        }
+
+        /**
+         * Moves the carousel to the next slide.
+         */
+        function nextSlide() {
+            currentIndex = (currentIndex + 1) % newArrivals.length;
+            updateCarousel();
+        }
+
+        /**
+         * Moves the carousel to the previous slide.
+         */
+        function prevSlide() {
+            currentIndex = (currentIndex - 1 + newArrivals.length) % newArrivals.length;
+            updateCarousel();
+        }
+
+        /**
+         * Starts the automatic carousel rotation.
+         */
+        function startCarouselAutoPlay() {
+            clearInterval(carouselInterval); // Clear any existing interval
+            carouselInterval = setInterval(nextSlide, 5000); // Change slide every 5 seconds
+        }
+
+        /**
+         * Sets up event listeners for carousel buttons and dots.
+         */
+        function setupCarouselEventListeners() {
+            prevButton.addEventListener('click', () => {
+                prevSlide();
+                startCarouselAutoPlay(); // Reset autoplay on manual interaction
+            });
+            nextButton.addEventListener('click', () => {
+                nextSlide();
+                startCarouselAutoPlay(); // Reset autoplay on manual interaction
+            });
+
+            document.querySelectorAll('.carousel-dot').forEach(dot => {
+                dot.addEventListener('click', (event) => {
+                    currentIndex = parseInt(event.target.dataset.index);
+                    updateCarousel();
+                    startCarouselAutoPlay(); // Reset autoplay on manual interaction
+                });
+            });
+
+            // Handle touch/swipe for carousel
+            let touchStartX = 0;
+            let touchEndX = 0;
+
+            carouselTrack.addEventListener('touchstart', (e) => {
+                touchStartX = e.touches[0].clientX;
+                clearInterval(carouselInterval); // Pause autoplay during swipe
+            });
+
+            carouselTrack.addEventListener('touchmove', (e) => {
+                touchEndX = e.touches[0].clientX;
+            });
+
+            carouselTrack.addEventListener('touchend', () => {
+                if (touchEndX < touchStartX - 50) { // Swiped left
+                    nextSlide();
+                }
+                if (touchEndX > touchStartX + 50) { // Swiped right
+                    prevSlide();
+                }
+                startCarouselAutoPlay(); // Resume autoplay after swipe
+            });
+
+            // Recalculate carousel position on window resize
+            window.addEventListener('resize', updateCarousel);
+        }
+
+        // Initialize on page load
+        window.onload = function() {
+            displayProducts(); // Display all products initially
+            updateCartDisplay(); // Update cart display from localStorage
+            renderCarousel(); // Render new arrivals carousel
+            startCarouselAutoPlay(); // Start carousel autoplay
+        };
+
+        // Close modals when clicking outside
+        window.addEventListener('click', (event) => {
+            if (event.target === productDetailModal) {
+                closeProductDetailModal();
+            }
+            if (event.target === cartModal) {
+                closeCartModal();
+            }
+        });
+
+    </script>
+</body>
+</html>
